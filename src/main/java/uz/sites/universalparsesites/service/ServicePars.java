@@ -17,10 +17,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import uz.sites.universalparsesites.dtos.ResultPars;
-import uz.sites.universalparsesites.entity.Category;
-import uz.sites.universalparsesites.entity.Contents;
-import uz.sites.universalparsesites.entity.Inf;
-import uz.sites.universalparsesites.entity.Rade;
+import uz.sites.universalparsesites.entity.*;
 import uz.sites.universalparsesites.helpers.ParsDto;
 import uz.sites.universalparsesites.helpers.RandomUserAgent;
 import uz.sites.universalparsesites.helpers.Selenium;
@@ -51,6 +48,9 @@ public class ServicePars {
 
     @Autowired
     private RadeRepository radeRepository;
+
+    @Autowired
+    private WeatherService weatherService;
 
     public void getAllSite() {
 //        new Thread(() -> {
@@ -259,7 +259,7 @@ public class ServicePars {
                 String hrefA = link.attr("abs:href");
                 if (hrefA.isEmpty()) {
                     hrefA = link.attr("href");
-                    if (hrefA.length()>5) {
+                    if (hrefA.length() > 5) {
                         hrefA = baseUrl + hrefA;
                     }
                 }
@@ -278,11 +278,12 @@ public class ServicePars {
             }
         }
         if (linksMap.isEmpty() && b) {
-            getAllSiteAndImgLinks(url,4, false);
+            getAllSiteAndImgLinks(url, 4, false);
         }
         System.gc();
         return linksMap;
     }
+
     private Map<String, String> getPresidentSite(String link, String userAgent) throws IOException {
         Document doc = Jsoup.connect(link).userAgent(userAgent).get();
         Map<String, String> linksMap = new HashMap<>();
@@ -327,6 +328,9 @@ public class ServicePars {
     }
 
     public ResponseEntity<Resource> downloadNewInf() {
+
+        Weather currentWeather = weatherService.getCurrentWeather();
+
         List<Rade> radeByDateAndUSD = radeRepository.findRadeByDateAndCode(getStrDate(), "USD");
         List<Rade> radeByDateAndRUB = radeRepository.findRadeByDateAndCode(getStrDate(), "RUB");
         List<Rade> radeByDateAndEUR = radeRepository.findRadeByDateAndCode(getStrDate(), "EUR");
@@ -337,7 +341,8 @@ public class ServicePars {
             radeList.add(radeByDateAndRUB.get(0));
             radeList.add(radeByDateAndEUR.get(0));
         }
-        ResultPars resultPars = new ResultPars(byDownloadedAndSitesId, radeList);
+
+        ResultPars resultPars = new ResultPars(currentWeather, byDownloadedAndSitesId, radeList);
 
         new Thread(() -> {
             for (Inf inf : byDownloadedAndSitesId) {
