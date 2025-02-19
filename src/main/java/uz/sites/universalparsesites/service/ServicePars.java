@@ -12,7 +12,6 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -24,6 +23,7 @@ import uz.sites.universalparsesites.entity.Inf;
 import uz.sites.universalparsesites.entity.Rade;
 import uz.sites.universalparsesites.helpers.ParsDto;
 import uz.sites.universalparsesites.helpers.RandomUserAgent;
+import uz.sites.universalparsesites.helpers.Selenium;
 import uz.sites.universalparsesites.helpers.WriteErrors;
 import uz.sites.universalparsesites.repository.*;
 
@@ -67,7 +67,7 @@ public class ServicePars {
                         RandomUserAgent randomUserAgent = new RandomUserAgent();
                         String userAgent = randomUserAgent.getRandomUserAgent();
                         try {
-                            Map<String, String> mapAllSiteAndImgLinks = getAllSiteAndImgLinks(category.getName(), category.getLengthBaseUrl(), userAgent);
+                            Map<String, String> mapAllSiteAndImgLinks = getAllSiteAndImgLinks(category.getName(), category.getLengthBaseUrl(), true);
                             if (mapAllSiteAndImgLinks.size() < 5) {
                                 Map<String, String> presidentSite = getPresidentSite(category.getName(), userAgent);
                                 mapAllSiteAndImgLinks.putAll(presidentSite);
@@ -128,9 +128,10 @@ public class ServicePars {
                 System.gc();
             }
         } catch (IOException ignored) {
-
+            System.gc();
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            System.gc();
+            System.out.println("Thread.sleep(1000 * 60 * 10) qaytardi: " + e.getMessage());
         }
 
 //        }).start();
@@ -179,51 +180,93 @@ public class ServicePars {
                                 }
                             } else break;
                         }
-                    } catch (NullPointerException e) {
+                    } catch (NullPointerException ignored) {
 
                     }
 
                 } catch (Exception e) {
                     System.gc();
                     radeRepository.save(new Rade(null, new Date() + "", null, null, null, null, null, "pars qila olmadi Exception xato berdi"));
-                    e.printStackTrace();
                 }
             } catch (MalformedURLException e) {
                 System.gc();
                 radeRepository.save(new Rade(null, new Date() + "", null, null, null, null, null, "https://nbu.uz/exchange-rates/json/ saytini ola olmadi MalformedURLException xato berdi"));
-                e.printStackTrace();
             } catch (ProtocolException e) {
                 System.gc();
                 radeRepository.save(new Rade(null, new Date() + "", null, null, null, null, null, "https://nbu.uz/exchange-rates/json/ saytini ola olmadi ProtocolException xato berdi"));
-                e.printStackTrace();
             } catch (IOException e) {
                 System.gc();
                 radeRepository.save(new Rade(null, new Date() + "", null, null, null, null, null, "https://nbu.uz/exchange-rates/json/ saytini ola olmadi IOException xato berdi"));
-                e.printStackTrace();
             }
             System.gc();
         }
 
     }
 
-    private Map<String, String> getAllSiteAndImgLinks(String url, int lengthBaseUrl, String userAgent) throws IOException {
+//    private Map<String, String> getAllSiteAndImgLinks(String url, int lengthBaseUrl, String userAgent) throws IOException {
+//        String[] split = url.split("/");
+//        StringBuilder baseUrl = new StringBuilder();
+//        for (int i = 0; i < lengthBaseUrl; i++) {
+//            baseUrl.append(split[i]).append("/");
+//        }
+//        System.out.println(baseUrl);
+//        Document doc = Jsoup.connect(url).userAgent(userAgent).get();
+//        Elements links = doc.select("a");
+//        Map<String, String> linksMap = new HashMap<>();
+//        for (Element link : links) {
+//            Element img = link.selectFirst("img");
+//            if (img != null) {
+//                String hrefA = link.attr("abs:href");
+//                if (hrefA.split("/").length > lengthBaseUrl) {
+//                    if (hrefA.startsWith(baseUrl.toString())) {
+//                        String attr = img.attr("abs:src");
+//                        if (!attr.isEmpty()) {
+//                            String attrImg = img.attr("abs:src");
+//                            linksMap.put(hrefA, attrImg);
+//                        } else {
+//                            String attrImg = img.attr("abs:data-src");
+//                            linksMap.put(hrefA, attrImg);
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//        System.gc();
+//        return linksMap;
+//    }
+
+
+    private static Map<String, String> getAllSiteAndImgLinks(String url, int lengthBaseUrl, boolean b) throws IOException {
         String[] split = url.split("/");
-        String baseUrl = "";
+        StringBuilder baseUrl = new StringBuilder();
         for (int i = 0; i < lengthBaseUrl; i++) {
-            baseUrl += split[i] + "/";
+            baseUrl.append(split[i]).append("/");
         }
         System.out.println(baseUrl);
-        Document doc = Jsoup.connect(url).userAgent(userAgent).get();
+        Selenium selenium = new Selenium();
+        Document doc;
+        if (b) {
+            doc = Jsoup.connect(url).get();
+        } else {
+            doc = Jsoup.parse(selenium.getOneSite(url));
+        }
         Elements links = doc.select("a");
         Map<String, String> linksMap = new HashMap<>();
+        baseUrl.deleteCharAt(baseUrl.length() - 1);
         for (Element link : links) {
             Element img = link.selectFirst("img");
             if (img != null) {
                 String hrefA = link.attr("abs:href");
+                if (hrefA.isEmpty()) {
+                    hrefA = link.attr("href");
+                    if (hrefA.length()>5) {
+                        hrefA = baseUrl + hrefA;
+                    }
+                }
                 if (hrefA.split("/").length > lengthBaseUrl) {
-                    if (hrefA.startsWith(baseUrl)) {
+                    if (hrefA.startsWith(baseUrl.toString())) {
                         String attr = img.attr("abs:src");
-                        if (!attr.equals("")) {
+                        if (!attr.isEmpty()) {
                             String attrImg = img.attr("abs:src");
                             linksMap.put(hrefA, attrImg);
                         } else {
@@ -234,16 +277,18 @@ public class ServicePars {
                 }
             }
         }
+        if (linksMap.isEmpty() && b) {
+            getAllSiteAndImgLinks(url,4, false);
+        }
         System.gc();
         return linksMap;
     }
-
     private Map<String, String> getPresidentSite(String link, String userAgent) throws IOException {
         Document doc = Jsoup.connect(link).userAgent(userAgent).get();
         Map<String, String> linksMap = new HashMap<>();
         for (Element div : doc.select("div")) {
             Elements a = div.select("a");
-            if (a.size() > 0) {
+            if (!a.isEmpty()) {
                 Elements img = div.select("img");
                 String attrImg = img.attr("abs:src");
                 if (attrImg.contains("uploads")) {
