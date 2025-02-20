@@ -25,7 +25,7 @@ public class Rade {
 
     private String name;
 
-    private Double rade;
+    private Double rate;
 
     private Double dif;
 

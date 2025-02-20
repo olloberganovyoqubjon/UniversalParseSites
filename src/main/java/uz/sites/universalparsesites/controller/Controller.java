@@ -31,4 +31,5 @@ public class Controller {
         ResponseEntity<Resource> resourceResponseEntity = service.downloadNewInf();
         return resourceResponseEntity;
     }
+
 }

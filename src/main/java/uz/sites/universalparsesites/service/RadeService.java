@@ -69,7 +69,7 @@ public class RadeService {
                                 }
                                 Rade rade = radeByCcy.get();
                                 rade.setName(o1.get("CcyNm_UZ").toString());
-                                rade.setRade(Double.parseDouble(o1.get("Rate").toString()));
+                                rade.setRate(Double.parseDouble(o1.get("Rate").toString()));
                                 rade.setDif(Double.parseDouble(o1.get("Diff").toString()));
                                 rade.setDate(o1.get("Date").toString());
                                 radeRepository.save(rade);
