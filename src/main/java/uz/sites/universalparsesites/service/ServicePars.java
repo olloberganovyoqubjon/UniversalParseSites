@@ -56,7 +56,7 @@ public class ServicePars {
 //        new Thread(() -> {
         try {
             while (true) {
-                getAllRade();
+//                getAllRade();
                 for (Category category : categoryRepository.findAll()) {
                     Long countInf = infRepository.countInfByCategory(category);
                     boolean countBool;
@@ -137,104 +137,6 @@ public class ServicePars {
 //        }).start();
 
     }
-
-    private String getStrDate() {
-        SimpleDateFormat formatter = new SimpleDateFormat("dd.MM.yyyy");
-        return formatter.format(new Date());
-    }
-
-    private void getAllRade() {
-        String strDate = getStrDate();
-        List<Rade> radeOptional = radeRepository.findRadeByDate(strDate);
-        if (radeOptional.isEmpty()) {
-            JSONParser parser = new JSONParser();
-            try {
-                URL url = new URL("https://nbu.uz/exchange-rates/json/");
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("GET");
-                conn.connect();
-                StringBuilder inline = new StringBuilder();
-                Scanner scanner = null;
-                try {
-                    scanner = new Scanner(url.openStream());
-                } catch (IOException e) {
-                    System.gc();
-                    radeRepository.save(new Rade(null, new Date() + "", null, null, null, null, null, "url ni scanner qila olmadi IOException xato berdi"));
-                }
-
-                try {
-                    try {
-                        while (true) {
-                            assert scanner != null;
-                            if (!scanner.hasNext()) break;
-                            inline.append(scanner.nextLine());
-                        }
-                        scanner.close();
-                        for (Object o : (JSONArray) parser.parse(inline.toString())) {
-                            JSONObject o1 = (JSONObject) o;
-                            List<Rade> radeOptional1 = radeRepository.findRadeByDate(o1.get("date").toString());
-                            if (radeOptional1.size() < 3) {
-                                if (o1.get("code").toString().equals("USD") || o1.get("code").toString().equals("RUB") || o1.get("code").toString().equals("EUR")) {
-                                    radeRepository.save(new Rade(null, o1.get("date").toString(), o1.get("code") + "", Double.parseDouble(o1.get("cb_price").toString()), o1.get("title") + ""
-                                            , Double.parseDouble(o1.get("nbu_buy_price").toString()), Double.parseDouble(o1.get("nbu_cell_price").toString()), null));
-                                }
-                            } else break;
-                        }
-                    } catch (NullPointerException ignored) {
-
-                    }
-
-                } catch (Exception e) {
-                    System.gc();
-                    radeRepository.save(new Rade(null, new Date() + "", null, null, null, null, null, "pars qila olmadi Exception xato berdi"));
-                }
-            } catch (MalformedURLException e) {
-                System.gc();
-                radeRepository.save(new Rade(null, new Date() + "", null, null, null, null, null, "https://nbu.uz/exchange-rates/json/ saytini ola olmadi MalformedURLException xato berdi"));
-            } catch (ProtocolException e) {
-                System.gc();
-                radeRepository.save(new Rade(null, new Date() + "", null, null, null, null, null, "https://nbu.uz/exchange-rates/json/ saytini ola olmadi ProtocolException xato berdi"));
-            } catch (IOException e) {
-                System.gc();
-                radeRepository.save(new Rade(null, new Date() + "", null, null, null, null, null, "https://nbu.uz/exchange-rates/json/ saytini ola olmadi IOException xato berdi"));
-            }
-            System.gc();
-        }
-
-    }
-
-//    private Map<String, String> getAllSiteAndImgLinks(String url, int lengthBaseUrl, String userAgent) throws IOException {
-//        String[] split = url.split("/");
-//        StringBuilder baseUrl = new StringBuilder();
-//        for (int i = 0; i < lengthBaseUrl; i++) {
-//            baseUrl.append(split[i]).append("/");
-//        }
-//        System.out.println(baseUrl);
-//        Document doc = Jsoup.connect(url).userAgent(userAgent).get();
-//        Elements links = doc.select("a");
-//        Map<String, String> linksMap = new HashMap<>();
-//        for (Element link : links) {
-//            Element img = link.selectFirst("img");
-//            if (img != null) {
-//                String hrefA = link.attr("abs:href");
-//                if (hrefA.split("/").length > lengthBaseUrl) {
-//                    if (hrefA.startsWith(baseUrl.toString())) {
-//                        String attr = img.attr("abs:src");
-//                        if (!attr.isEmpty()) {
-//                            String attrImg = img.attr("abs:src");
-//                            linksMap.put(hrefA, attrImg);
-//                        } else {
-//                            String attrImg = img.attr("abs:data-src");
-//                            linksMap.put(hrefA, attrImg);
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//        System.gc();
-//        return linksMap;
-//    }
-
 
     private static Map<String, String> getAllSiteAndImgLinks(String url, int lengthBaseUrl, boolean b) throws IOException {
         String[] split = url.split("/");
@@ -331,16 +233,18 @@ public class ServicePars {
 
         Weather currentWeather = weatherService.getCurrentWeather();
 
-        List<Rade> radeByDateAndUSD = radeRepository.findRadeByDateAndCode(getStrDate(), "USD");
-        List<Rade> radeByDateAndRUB = radeRepository.findRadeByDateAndCode(getStrDate(), "RUB");
-        List<Rade> radeByDateAndEUR = radeRepository.findRadeByDateAndCode(getStrDate(), "EUR");
+        Optional<Rade> radeByDateAndUSD = radeRepository.findRadeByCcy("USD");
+        Optional<Rade> radeByDateAndRUB = radeRepository.findRadeByCcy("RUB");
+        Optional<Rade> radeByDateAndEUR = radeRepository.findRadeByCcy("EUR");
         List<Inf> byDownloadedAndSitesId = infRepository.findByDownloaded(false);
         List<Rade> radeList = new ArrayList<>();
-        if (!radeByDateAndUSD.isEmpty()) {
-            radeList.add(radeByDateAndUSD.get(0));
-            radeList.add(radeByDateAndRUB.get(0));
-            radeList.add(radeByDateAndEUR.get(0));
+        if (radeByDateAndUSD.isEmpty() || radeByDateAndRUB.isEmpty() || radeByDateAndEUR.isEmpty()) {
+            System.out.println("log");
+            return null;
         }
+        radeList.add(radeByDateAndUSD.get());
+        radeList.add(radeByDateAndRUB.get());
+        radeList.add(radeByDateAndEUR.get());
 
         ResultPars resultPars = new ResultPars(currentWeather, byDownloadedAndSitesId, radeList);
 

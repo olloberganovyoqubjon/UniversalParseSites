@@ -25,7 +25,7 @@ public class WeatherService {
         this.weatherRepository = weatherRepository;
     }
 
-    @Scheduled(cron = "0 0 7 * * ?")  // Har kuni soat 07:00 da ishga tushadi
+    @Scheduled(cron = "0 0 8 * * ?")  // Har kuni soat 08:00 da ishga tushadi
     public void fetchWeatherData() {
         String API_KEY = "1dcb2323a60be0d379e9a5c031daac52"; // OpenWeatherMap API kaliti
         String CITY = "Tashkent";

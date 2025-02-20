@@ -11,5 +11,6 @@ import java.util.Optional;
 public interface RadeRepository extends JpaRepository<Rade, Integer> {
 
     List<Rade> findRadeByDate(String date);
-    List<Rade> findRadeByDateAndCode(String date, String code);
+
+    Optional<Rade> findRadeByCcy(String ccy);
 }

@@ -21,18 +21,13 @@ public class Rade {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    private String ccy;
+
+    private String name;
+
+    private Double rade;
+
+    private Double dif;
 
     private String date;
-
-    private String code;
-
-    private Double cbPrice;
-
-    private String title;
-
-    private Double byPrice;
-
-    private Double cellPrice;
-
-    private String error;
 }
